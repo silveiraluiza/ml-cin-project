@@ -1,1 +1,1 @@
-# code for bayesian knn classifier
+# [marcos de souza] code for bayesian knn classifier
