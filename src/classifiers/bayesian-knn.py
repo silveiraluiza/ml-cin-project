@@ -1,1 +1,5 @@
-# [marcos de souza] code for bayesian knn classifier
+# @author: marcos de souza
+
+
+
+
