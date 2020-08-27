@@ -22,11 +22,6 @@ def construct_knn_neighborhood (X, y, k):
     idx = np.argsort(D, axis=1)
     idx_nn = idx[:, 1:k+1]
 
-    # y_fac_arr = []
-    # for label, objs in enumerate(y_fac):
-    #     for obj in objs:
-    #         y_fac_arr.append([label, obj])
-
     [idx_nn[0][i] for i in range(0, k)]
 
     y_nn = []
