@@ -14,14 +14,23 @@ def normalize_and_split_data(X, y):
     return X_train, X_test, y_train, y_test
 
 
-def construct_knn_neighborhood (X):
+def construct_knn_neighborhood (X, y, k):
     # compute euclidean distances
-    dist = pairwise_distances(X)
-    dist **= 2
+    D = pairwise_distances(X)
+    D **= 2
     # sort the distance matrix D in ascending order
-    dump = np.sort(dist, axis=1)
+    idx = np.argsort(D, axis=1)
+    idx_nn = idx[:, 1:k+1]
 
-    return dump
+    [idx_nn[0][i] for i in range(0, k)]
+
+    y_nn = []
+    for obj in range(0, len(idx_nn)):
+        y_nn.append([])
+        for nn in idx_nn[obj]:
+            label = [y[i][0] for i in range(0, len(y)) if y[i][1] == nn+1][0]
+            y_nn[obj].append(label)
+    return idx_nn, y_nn
 
 
 
