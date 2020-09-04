@@ -12,40 +12,55 @@ import pandas as pd
 import numpy as np
 from sklearn import preprocessing
 from classifiers.bayesianKnn import BayesianKnnClassifier
-from sklearn.model_selection import cross_val_score
+from classifiers.GaussianBayes import GaussianBayes
+from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.model_selection import RepeatedKFold
 from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 
-def cross_validation(X, y):
-    model = BayesianKnnClassifier(k=5)
-    cv = RepeatedKFold(n_splits=10, n_repeats=30, random_state=1)
-    n_scores = cross_val_score(model, X, y, scoring='f1_macro', cv=cv, n_jobs=-1, error_score='raise')
-
-    print('f-measure (avg):', np.mean(n_scores))
-
-def train_test_validation(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state=1)
+def get_best_model_by_cross_validation(X_train, y_train, model, **kwargs):
     
-    classifier = BayesianKnnClassifier(k=5)
-    classifier.fit(X_train, y_train)
+    cv = RepeatedKFold(n_splits=10, n_repeats=30, random_state=1)
 
-    y_pred = classifier.predict(X_test)
+    clf = GridSearchCV(estimator=model, param_grid=kwargs, n_jobs=-1, cv=cv, scoring='accuracy')
+    clf.fit(X_train, y_train)
 
-    cm = confusion_matrix(y_test, y_pred)
+    best_model = clf.best_estimator_
+
+    return best_model
+
+def train_test_validation(X, y, model, **kwargs):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.30, random_state=1)
+    
+    X_train_scaled = preprocessing.scale(X_train)
+
+    classifier = get_best_model_by_cross_validation(X_train_scaled, y_train, model, **kwargs)
+
+    X_test_scaled = preprocessing.scale(X_test)
+
+    y_pred = classifier.predict(X_test_scaled)
+
+    # cm = confusion_matrix(y_test, y_pred)
     acc = accuracy_score(y_test, y_pred)
 
-    print("model confusion matrix\n", cm)
+    # print("model confusion matrix\n", cm)
     print("model accuracy: ", acc)
 
-X = pd.read_csv("./data/mfeat-fac", sep=r'\s+',  header= None)
-y = pd.read_csv("./data/y_fac.csv", sep=";")
+views = ['fou', 'kar', 'fac']
 
-y = y.values[:, 0]
+model_names = ['bayesian_knn', 'gaussian_bayes']
+models = [BayesianKnnClassifier(), GaussianBayes()]
+kwargs = [{ 'k' : range(1, 12, 2)}, {}]
 
-X_scaled = preprocessing.scale(X)
-train_test_validation(X_scaled, y)
+for model, params, model_name in zip(models, kwargs, model_names):
+    for view in views:
+        print('model: ', model_name)
+        print('view: ', view)
 
-cross_validation(X_scaled, y)
+        X_view = pd.read_csv(f'./data/mfeat-{view}', sep=r'\s+',  header= None)
+        y_view = pd.read_csv(f'./data/particao_crispy.csv', sep=";", header= None)
+
+        y_view = y_view.values[:, 0]
+        train_test_validation(X_view, y_view, model, **params)

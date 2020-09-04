@@ -1,11 +1,8 @@
-class GaussianBayes:
+import numpy as np
+import math 
+from sklearn.base import BaseEstimator, ClassifierMixin
 
-  def __init__(self, X, y_train, K, C, d):
-    self.X = X
-    self.y_train = y_train
-    self.K = K
-    self.C = C
-    self.d = d
+class GaussianBayes(BaseEstimator, ClassifierMixin):
 
   # Encontrado a partir da partição crispy, uma lista com os exemplos por grupo
   def crispy(self, y_train, C):
@@ -19,13 +16,13 @@ class GaussianBayes:
     return partition
 
   # Estimativa de Máxima Verossimilhança P(W_i):
-  def estMaxVer(self, particao, n, C):
+  def estMaxVer(self, particao, C):
     Pwi = []
     for i in range(0, C):
       pwi = 0
-      for exemplo_rotulado in range(0,len(particao[i])):
+      for _ in range(0,len(particao[i])):
         pwi += 1
-      pwi = pwi / n
+      pwi = pwi / self.K
       Pwi.append(pwi)
     return Pwi
 
@@ -97,14 +94,14 @@ class GaussianBayes:
     return pr_clr_somatorio
 
   # Predição: Afetar o exemplo X_k à classe W_i, se:
-  def Predict(self, prob_normal_multivariada, P_wi, pr_clr_somatorio, C, K):
+  def posteriori(self, prob_normal_multivariada, P_wi, pr_clr_somatorio, C, K):
     lista_prob_post = []
     for i in range(0,C):
-      lista_prob = []
+      lista_prob_post.append([])
       for k in range(0,K):
-        lista_prob.append((prob_normal_multivariada[i][k] * P_wi[i]) / pr_clr_somatorio[k])
-      lista_prob_post.append(lista_prob)
-    lista_prob_post = np.array(lista_prob_post).T
+        prob = (prob_normal_multivariada[i][k] * P_wi[i]) / pr_clr_somatorio[k]
+        lista_prob_post[i].append(prob)
+    lista_prob_post = np.transpose(lista_prob_post)
     prediction = []
     for k in range(0,K):
       prediction.append(np.argmax(lista_prob_post[k]))
@@ -113,39 +110,44 @@ class GaussianBayes:
 
   # TREINO
   def fit(self, X_train, y_train):
+
+    self.K, self.d = len(X_train), len(X_train[0])    # Número de Exemplos e de dimensões
+    self.C = 10
+
     # Encontrando a partição por exemplos dos grupos
     particao = self.crispy(y_train, self.C)
     
     # Calculando a matriz de maxima verossimilhança para o exemplo
-    P_wi = self.estMaxVer(particao, len(X_train), self.C)
+    self.P_wi = self.estMaxVer(particao, self.C)
     
+    self.X = X_train
     # Calculando o vetor de médias para o exemplo
-    media = self.medias(particao, self.C, self.d)
+    self.media = self.medias(particao, self.C, self.d)
     
     # Sigma_ij para o calculo da probabilidade a posteriori. Usando as matrizes de média e a matriz de atributos X
-    variancia1, variancia2 = self.variancia(X_train, media, self.C)
+    _, variancia2 = self.variancia(X_train, self.media, self.C)
 
-    covariancia = self.matriz_covariancia(particao, variancia2, self.C, self.d)
+    self.covariancia = self.matriz_covariancia(particao, variancia2, self.C, self.d)
     
     # Definir as probabilidades utilizando uma Estimativa de Máxima Verossimilhança supondo uma Normal Multivariada
-    prob_normal_multivariada = self.prod_matriz(variancia1, covariancia, self.C, len(X_train))
+    # self.prob_normal_multivariada = self.prod_matriz(variancia1, covariancia, self.C, len(X_train))
     
-    pr_clr_somatorio = self.soma_termo_normalizacao(prob_normal_multivariada, P_wi, self.C, len(X_train))
+    # self.pr_clr_somatorio = self.soma_termo_normalizacao(prob_normal_multivariada, P_wi, self.C, len(X_train))
     
     # Lista com cada exemplo e sua respectiva classe a ser escolhida
-    y_pred = self.Predict(prob_normal_multivariada, P_wi, pr_clr_somatorio, self.C, len(X_train))
-    return P_wi, media, covariancia, y_pred
+    # y_pred = self.Predict(prob_normal_multivariada, P_wi, pr_clr_somatorio, self.C, len(X_train))
+    # return y_pred
 
-  # Predição no TESTE
-  def predict(self, X_test, P_wi, media, covariancia):
+  # Predição
+  def predict(self, X):
     # Sigma_ij para o calculo da probabilidade a posteriori. Usando as matrizes de média e a matriz de atributos X
-    variancia1, variancia2 = self.variancia(X_test, media, self.C)
+    variancia1, _ = self.variancia(X, self.media, self.C)
     
     # Definir as probabilidades utilizando uma Estimativa de Máxima Verossimilhança supondo uma Normal Multivariada
-    prob_normal_multivariada = self.prod_matriz(variancia1, covariancia, self.C, len(X_test))
+    prob_normal_multivariada = self.prod_matriz(variancia1, self.covariancia, self.C, len(X))
     
-    pr_clr_somatorio = self.soma_termo_normalizacao(prob_normal_multivariada, P_wi, self.C, len(X_test))
+    pr_clr_somatorio = self.soma_termo_normalizacao(prob_normal_multivariada, self.P_wi, self.C, len(X))
     
     # Lista com cada exemplo e sua respectiva classe a ser escolhida
-    y_pred = self.Predict(prob_normal_multivariada, P_wi, pr_clr_somatorio, self.C, len(X_test))
+    y_pred = self.posteriori(prob_normal_multivariada, self.P_wi, pr_clr_somatorio, self.C, len(X))
     return y_pred

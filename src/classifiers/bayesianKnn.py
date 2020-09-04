@@ -4,10 +4,9 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 class BayesianKnnClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(self, k, log=False):
+    def __init__(self, k=1, log=False):
         self.k = k
         self.log = log
-    
     
     def density(self, label):
         y_arr = [self.y[i] for i in range(0, len(self.y))]
