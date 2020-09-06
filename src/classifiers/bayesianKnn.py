@@ -18,7 +18,8 @@ class BayesianKnnClassifier(BaseEstimator, ClassifierMixin):
     def posteriori(self, xi):
         # P(wj/xi) = P(xi/wj)*P(wj)
         n_classes = np.unique(xi)
-        estimation = 0
+        best_estimation = 0
+        class_estimation = []
         label = None
 
         for c in n_classes:
@@ -26,11 +27,13 @@ class BayesianKnnClassifier(BaseEstimator, ClassifierMixin):
             c_density = self.density(c)
             c_estimation = likelihood * c_density
 
-            if c_estimation > estimation:
-                estimation = c_estimation
+            class_estimation.append([c, c_estimation])
+
+            if c_estimation > best_estimation:
+                best_estimation = c_estimation
                 label = c
         
-        return estimation, label
+        return class_estimation, label
 
 
     def fit (self, X, y):
@@ -54,11 +57,11 @@ class BayesianKnnClassifier(BaseEstimator, ClassifierMixin):
         nn_labels = self.get_nn_label(X)
         
         labels = []
+        self.estimations = []
         for xi in nn_labels:
-            estimation, label = self.posteriori(xi)
+            nn_estimations, label = self.posteriori(xi)
 
-            if self.log:
-                print('obj: ', xi, 'estimation:', estimation, 'label: ', label)
+            self.estimations.append(nn_estimations)
             labels.append(label)
 
         return labels
