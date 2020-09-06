@@ -22,18 +22,16 @@ from sklearn.metrics import accuracy_score
 
 def get_best_model_by_cross_validation(X_train, y_train, model, **kwargs):
     
-    cv = RepeatedKFold(n_splits=10, n_repeats=30, random_state=1)
+    cv = RepeatedKFold(n_splits=10, n_repeats=5, random_state=1)
 
-    clf = GridSearchCV(estimator=model, param_grid=kwargs, n_jobs=-1, cv=cv, scoring='accuracy')
+    clf = GridSearchCV(estimator=model, param_grid=kwargs, n_jobs=-1, cv=cv, scoring='balanced_accuracy')
     clf.fit(X_train, y_train)
 
     best_model = clf.best_estimator_
 
     return best_model
 
-def train_test_validation(X, y, model, **kwargs):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.30, random_state=1)
-    
+def train_test_validation(X_train, X_test, y_train, y_true, model, **kwargs):    
     X_train_scaled = preprocessing.scale(X_train)
 
     classifier = get_best_model_by_cross_validation(X_train_scaled, y_train, model, **kwargs)
@@ -42,25 +40,56 @@ def train_test_validation(X, y, model, **kwargs):
 
     y_pred = classifier.predict(X_test_scaled)
 
+    probs = classifier.estimations
+
     # cm = confusion_matrix(y_test, y_pred)
     acc = accuracy_score(y_test, y_pred)
 
     # print("model confusion matrix\n", cm)
-    print("model accuracy: ", acc)
+    return probs, acc
 
 views = ['fou', 'kar', 'fac']
 
 model_names = ['bayesian_knn', 'gaussian_bayes']
 models = [BayesianKnnClassifier(), GaussianBayes()]
-kwargs = [{ 'k' : range(1, 12, 2)}, {}]
+kwargs = [{ 'k' : range(3, 5, 2)}, {}]
+
+probs = []
+y_crispy = pd.read_csv(f'./data/particao_crispy.csv', sep=";", header= None)
+y_crispy = y_crispy.values[:, 0]
 
 for model, params, model_name in zip(models, kwargs, model_names):
     for view in views:
+        X_view = pd.read_csv(f'./data/mfeat-{view}', sep=r'\s+',  header= None)
+
+        X_train, X_test, y_train, y_true = train_test_split(X_view, y_crispy, test_size = 0.10, random_state=1)
+        
+        probs_view, acc = train_test_validation(X_train, X_test, y_train, y_true, model, **params)
+
+        probs.append(probs_view)
+
         print('model: ', model_name)
         print('view: ', view)
+        print('view acc: ', acc)
 
-        X_view = pd.read_csv(f'./data/mfeat-{view}', sep=r'\s+',  header= None)
-        y_view = pd.read_csv(f'./data/particao_crispy.csv', sep=";", header= None)
+    # sum rule
+    new_y_pred = []
+    for pview1, pview2, pview3 in zip(probs[0], probs[1], probs[2]):
+        best_sum = 0
+        label = None
+        obj_probs = np.concatenate([pview1, pview2, pview3])
 
-        y_view = y_view.values[:, 0]
-        train_test_validation(X_view, y_view, model, **params)
+        n_classes = np.unique([int(k[0]) for k in obj_probs])
+
+        for c in n_classes:
+            c_sum = np.sum([k[1] for k in obj_probs if k[0] == c])
+
+            if c_sum > best_sum:
+                best_sum = c_sum
+                label = c
+
+        new_y_pred.append(label)
+    
+    new_acc = accuracy_score(y_true, new_y_pred)
+    print('accuracy by sum rule: ', new_acc)
+
