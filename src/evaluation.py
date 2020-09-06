@@ -43,7 +43,7 @@ def train_test_validation(X_train, X_test, y_train, y_true, model, **kwargs):
     probs = classifier.estimations
 
     # cm = confusion_matrix(y_test, y_pred)
-    acc = accuracy_score(y_test, y_pred)
+    acc = accuracy_score(y_true, y_pred)
 
     # print("model confusion matrix\n", cm)
     return probs, acc
