@@ -48,6 +48,23 @@ def train_test_validation(X_train, X_test, y_train, y_true, model, **kwargs):
     # print("model confusion matrix\n", cm)
     return probs, acc
 
+def estMaxVerBayesiano(y_train, n):   # Usado para o classificador Bayesiano Gaussiano
+    particao = []
+    for i in range(0, 10):
+      part = []
+      for j in range(1, len(y)+1):
+        if i == y_train[j-1]:
+          part.append(j)
+      particao.append(part)
+    Pwi = []
+    for i in range(0, 10):
+      pwi = 0
+      for _ in range(0, len(particao[i])):
+        pwi += 1
+      pwi = pwi / n
+      Pwi.append(pwi)
+    return Pwi
+
 views = ['fou', 'kar', 'fac']
 
 model_names = ['bayesian_knn', 'gaussian_bayes']
@@ -80,16 +97,25 @@ for model, params, model_name in zip(models, kwargs, model_names):
         obj_probs = np.concatenate([pview1, pview2, pview3])
 
         n_classes = np.unique([int(k[0]) for k in obj_probs])
+        
+        if model_name == 'gaussian_bayes':
+            
+            P_wi = estMaxVerBayesiano(y, len(X_train))
+            for c in n_classes:
+                c_sum = (-2 * P_wi[c]) + (np.sum([k[1] for k in obj_probs if k[0] == c]))
+                
+                if c_sum > best_sum:
+                    best_sum = c_sum
+                    label = c
+        else:
+            for c in n_classes:
+                c_sum = np.sum([k[1] for k in obj_probs if k[0] == c])
 
-        for c in n_classes:
-            c_sum = np.sum([k[1] for k in obj_probs if k[0] == c])
-
-            if c_sum > best_sum:
-                best_sum = c_sum
-                label = c
+                if c_sum > best_sum:
+                    best_sum = c_sum
+                    label = c
 
         new_y_pred.append(label)
     
     new_acc = accuracy_score(y_true, new_y_pred)
     print('accuracy by sum rule: ', new_acc)
-
