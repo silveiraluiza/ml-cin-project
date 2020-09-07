@@ -22,7 +22,7 @@ from sklearn.metrics import accuracy_score
 
 def get_best_model_by_cross_validation(X_train, y_train, model, **kwargs):
     
-    cv = RepeatedKFold(n_splits=10, n_repeats=5, random_state=1)
+    cv = RepeatedKFold(n_splits=10, n_repeats=30, random_state=1)
 
     clf = GridSearchCV(estimator=model, param_grid=kwargs, n_jobs=-1, cv=cv, scoring='balanced_accuracy')
     clf.fit(X_train, y_train)
@@ -48,22 +48,15 @@ def train_test_validation(X_train, X_test, y_train, y_true, model, **kwargs):
     # print("model confusion matrix\n", cm)
     return probs, acc
 
-def estMaxVerBayesiano(y_train, n):   # Usado para o classificador Bayesiano Gaussiano
-    particao = []
-    for i in range(0, 10):
-      part = []
-      for j in range(1, len(y)+1):
-        if i == y_train[j-1]:
-          part.append(j)
-      particao.append(part)
-    Pwi = []
-    for i in range(0, 10):
-      pwi = 0
-      for _ in range(0, len(particao[i])):
-        pwi += 1
-      pwi = pwi / n
-      Pwi.append(pwi)
-    return Pwi
+def priori(y_train):   # Usado para o classificador Bayesiano Gaussiano
+    p_wi = []
+    n_classes = np.unique(y_train)
+
+    for c in n_classes:
+        p = len([i for i in y_train if i == c]) / len(y_train)
+        p_wi.append(p)
+        
+    return p_wi
 
 views = ['fou', 'kar', 'fac']
 
@@ -92,28 +85,19 @@ for model, params, model_name in zip(models, kwargs, model_names):
     # sum rule
     new_y_pred = []
     for pview1, pview2, pview3 in zip(probs[0], probs[1], probs[2]):
-        best_sum = 0
+        best_sum = -9999999
         label = None
         obj_probs = np.concatenate([pview1, pview2, pview3])
 
         n_classes = np.unique([int(k[0]) for k in obj_probs])
         
-        if model_name == 'gaussian_bayes':
+        p_wi = priori(y_train)
+        for c in n_classes:
+            c_sum = (-2 * p_wi[c]) + (np.sum([k[1] for k in obj_probs if k[0] == c]))
             
-            P_wi = estMaxVerBayesiano(y, len(X_train))
-            for c in n_classes:
-                c_sum = (-2 * P_wi[c]) + (np.sum([k[1] for k in obj_probs if k[0] == c]))
-                
-                if c_sum > best_sum:
-                    best_sum = c_sum
-                    label = c
-        else:
-            for c in n_classes:
-                c_sum = np.sum([k[1] for k in obj_probs if k[0] == c])
-
-                if c_sum > best_sum:
-                    best_sum = c_sum
-                    label = c
+            if c_sum > best_sum:
+                best_sum = c_sum
+                label = c
 
         new_y_pred.append(label)
     
