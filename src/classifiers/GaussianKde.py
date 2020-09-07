@@ -1,5 +1,6 @@
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.neighbors import KernelDensity
+import numpy as np
 
 class KDEClassifier(BaseEstimator, ClassifierMixin):
     """Bayesian generative classification based on KDE
@@ -29,7 +30,9 @@ class KDEClassifier(BaseEstimator, ClassifierMixin):
         logprobs = np.array([model.score_samples(X)
                              for model in self.models_]).T
         result = np.exp(logprobs + self.logpriors_)
-        return result / result.sum(1, keepdims=True)
+        result = result / result.sum(1, keepdims=True)
+        self.estimations = result
+        return result
         
     def predict(self, X):
         return self.classes_[np.argmax(self.predict_proba(X), 1)]
