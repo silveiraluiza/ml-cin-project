@@ -30,12 +30,16 @@ def get_best_model_by_cross_validation(X_train, y_train, model, **kwargs):
 
     best_model = clf.best_estimator_
 
-    return best_model
+    # print('bandwidth: ', best_model.bandwidth)
+
+    cv_results = [np.max(clf.cv_results_[f'split{i}_test_score']) for i in range(0, 300)]
+
+    return best_model, cv_results
 
 def train_test_validation(X_train, X_test, y_train, y_true, model, **kwargs):    
     X_train_scaled = preprocessing.scale(X_train)
 
-    classifier = get_best_model_by_cross_validation(X_train_scaled, y_train, model, **kwargs)
+    classifier, cv_results = get_best_model_by_cross_validation(X_train_scaled, y_train, model, **kwargs)
 
     X_test_scaled = preprocessing.scale(X_test)
 
@@ -47,7 +51,7 @@ def train_test_validation(X_train, X_test, y_train, y_true, model, **kwargs):
     acc = accuracy_score(y_true, y_pred)
 
     # print("model confusion matrix\n", cm)
-    return probs, acc
+    return probs, acc, cv_results
 
 def priori(y_train):   # Usado para o classificador Bayesiano Gaussiano
     p_wi = []
@@ -61,13 +65,27 @@ def priori(y_train):   # Usado para o classificador Bayesiano Gaussiano
 
 views = ['fou', 'kar', 'fac']
 
-model_names = ['bayesian_knn', 'gaussian_bayes', "gaussian_kde"]
-models = [BayesianKnnClassifier(), GaussianBayes(), KDEClassifier()]
-kwargs = [{ 'k' : range(3, 5, 2)}, {}, {"bandwidth": 10 ** np.linspace(0, 2, 100)}]
+model_names = [
+    'gaussian_kde',
+    'bayesian_knn',
+    'gaussian_bayes'
+]
+models = [
+    KDEClassifier(),
+    BayesianKnnClassifier(),
+    GaussianBayes()
+]
+kwargs = [
+    {"bandwidth": 10 ** np.linspace(0, 2, 100)}, 
+    { 'k' : range(3, 9, 2)},
+    {}
+]
 
 probs = []
 y_crispy = pd.read_csv(f'./data/particao_crispy.csv', sep=";", header= None)
 y_crispy = y_crispy.values[:, 0]
+
+cv_views = []
 
 for model, params, model_name in zip(models, kwargs, model_names):
     for view in views:
@@ -75,7 +93,9 @@ for model, params, model_name in zip(models, kwargs, model_names):
 
         X_train, X_test, y_train, y_true = train_test_split(X_view, y_crispy, test_size = 0.10, random_state=1)
         
-        probs_view, acc = train_test_validation(X_train, X_test, y_train, y_true, model, **params)
+        probs_view, acc, cv_results_view = train_test_validation(X_train, X_test, y_train, y_true, model, **params)
+
+        cv_views.append(cv_results_view)
 
         probs.append(probs_view)
 
@@ -104,3 +124,7 @@ for model, params, model_name in zip(models, kwargs, model_names):
     
     new_acc = accuracy_score(y_true, new_y_pred)
     print('accuracy by sum rule: ', new_acc)
+
+cv_results_df = pd.DataFrame(cv_views)
+
+cv_results_df.T.to_csv('cv_results.csv', sep=';', index=False)
