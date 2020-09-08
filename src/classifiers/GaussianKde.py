@@ -31,7 +31,7 @@ class KDEClassifier(BaseEstimator, ClassifierMixin):
                              for model in self.models_]).T
         result = np.exp(logprobs + self.logpriors_)
         result = result / result.sum(1, keepdims=True)
-        self.estimations = result
+        self.estimations = [[i, p] for i, p in zip(range(0, len(result)), result)]
         return result
         
     def predict(self, X):
