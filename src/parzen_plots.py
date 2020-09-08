@@ -20,6 +20,7 @@ from sklearn.model_selection import train_test_split
 from sklearn import metrics
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
+import matplotlib.pyplot as plt
 
 def get_best_model_by_cross_validation(X_train, y_train, model, **kwargs):
     
@@ -32,18 +33,19 @@ def get_best_model_by_cross_validation(X_train, y_train, model, **kwargs):
     
 
     lista_params = []
-    for i in grid.cv_results_["params"]:
+    for i in clf.cv_results_["params"]:
         for j in i.values():
             lista_params.append(j)
-            
+
     bandwidths = lista_params
     scores = clf.cv_results_["mean_test_score"]
     plt.semilogx(bandwidths, scores)
     plt.xlabel('bandwidth')
     plt.ylabel('accuracy')
     plt.title('KDE Model Performance')
-    print(grid.best_params_)
-    print('accuracy =', grid.best_score_)
+    print(clf.best_params_)
+    print('accuracy =', clf.best_score_)
+    plt.show()
     return best_model
 
 def train_test_validation(X_train, X_test, y_train, y_true, model, **kwargs):    
@@ -75,17 +77,17 @@ def priori(y_train):   # Usado para o classificador Bayesiano Gaussiano
 
 views = ['fou', 'kar', 'fac']
 
-model_names = ['bayesian_knn', 'gaussian_bayes', "gaussian_kde"]
-models = [BayesianKnnClassifier(), GaussianBayes(), KDEClassifier()]
-kwargs = [{ 'k' : range(3, 5, 2)}, {}, {"bandwidth": 10 ** np.linspace(0, 2, 100)}]
+model_names = ["gaussian_kde"]
+models = [ KDEClassifier()]
+kwargs = [{"bandwidth": 10 ** np.linspace(0, 2, 100)}]
 
 probs = []
-y_crispy = pd.read_csv(f'./data/particao_crispy.csv', sep=";", header= None)
+y_crispy = pd.read_csv(f'../data/particao_crispy.csv', sep=";", header= None)
 y_crispy = y_crispy.values[:, 0]
 
 for model, params, model_name in zip(models, kwargs, model_names):
     for view in views:
-        X_view = pd.read_csv(f'./data/mfeat-{view}', sep=r'\s+',  header= None)
+        X_view = pd.read_csv(f'../data/mfeat-{view}', sep=r'\s+',  header= None)
 
         X_train, X_test, y_train, y_true = train_test_split(X_view, y_crispy, test_size = 0.10, random_state=1)
         
