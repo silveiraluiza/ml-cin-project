@@ -13,6 +13,7 @@ import numpy as np
 from sklearn import preprocessing
 from classifiers.bayesianKnn import BayesianKnnClassifier
 from classifiers.GaussianBayes import GaussianBayes
+from classifiers.GaussianKde import KDEClassifier
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.model_selection import RepeatedKFold
 from sklearn.model_selection import train_test_split
@@ -60,9 +61,9 @@ def priori(y_train):   # Usado para o classificador Bayesiano Gaussiano
 
 views = ['fou', 'kar', 'fac']
 
-model_names = ['bayesian_knn', 'gaussian_bayes']
-models = [BayesianKnnClassifier(), GaussianBayes()]
-kwargs = [{ 'k' : range(3, 5, 2)}, {}]
+model_names = ['bayesian_knn', 'gaussian_bayes', "gaussian_kde"]
+models = [BayesianKnnClassifier(), GaussianBayes(), KDEClassifier()]
+kwargs = [{ 'k' : range(3, 5, 2)}, {}, {"bandwidth": 10 ** np.linspace(0, 2, 100)}]
 
 probs = []
 y_crispy = pd.read_csv(f'./data/particao_crispy.csv', sep=";", header= None)
