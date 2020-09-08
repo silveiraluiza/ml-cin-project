@@ -128,3 +128,23 @@ for model, params, model_name in zip(models, kwargs, model_names):
 cv_results_df = pd.DataFrame(cv_views)
 
 cv_results_df.T.to_csv('cv_results.csv', sep=';', index=False)
+
+acuracias = {'bayesian_knn': [0.79, 0.63, 0.775, 0.855], 'gaussian_bayes':[0.805, 0.58, 0.735, 0.800], 'gaussian_kde':[0.835, 0.615, 0.82, 0.835]}
+for model_name in model_names:
+    print()
+    print("Model:", model_name)
+    for i in acuracias.items():
+        if model_name == i[0]:    
+          for acc in i[1]:
+            print("Classificador:", views[i[1].index(acc)])
+            proporcao = acc
+            print("Estimativa Pontual: ", proporcao)
+            print("Intervalo de Confiança: ", calc_intervalo_confiança(proporcao))
+
+def calc_intervalo_confiança(proporcao):
+    n = 2000    # Número de exemplos
+    z = 1.96    # Para uma Confiança de 95%, a Tabela Z apresenta valor crítico igual a 1.96
+    diff = z*np.sqrt(proporcao*(1-proporcao)/n)
+    upper = round(proporcao - diff, 5)
+    lower = round(proporcao + diff, 5)
+    return (upper, lower)
