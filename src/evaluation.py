@@ -1,6 +1,4 @@
-# [josé marcus]
-# 
-# 1) criar função para avaliação dos classificadores, envolvendo as etapas:
+# função para avaliação dos classificadores, envolvendo as etapas:
 # - validação cruzada estratificada 
 # "30 times ten fold" para avaliar e comparar os classificadores combinados. 
 # - Se necessário, retire do conjunto de aprendizagem, um conjunto de validação para
